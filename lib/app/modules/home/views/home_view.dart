@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -17,23 +18,33 @@ class HomeView extends GetView<HomeController> {
         title: Text('Stripe Payment'),
         centerTitle: true,
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          InkWell(
-            onTap: () async {
-              await makePayment();
-            },
-            child: Container(
-                height: 50,
-                width: 200,
-                decoration: BoxDecoration(color: Colors.green),
-                child: Center(
-                  child: Text('Pay'),
-                )),
-          ),
-        ],
+      body: Container(
+        height: Get.height,
+        width: Get.width,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            InkWell(
+              onTap: () async {
+                await makePayment();
+              },
+              child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                  margin: EdgeInsets.symmetric(horizontal: 100),
+                  decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(15)),
+                  child: Center(
+                    child: Text('Pay Now',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 25)),
+                  )),
+            ),
+          ],
+        ),
       ),
       // Center(
       //     child: ElevatedButton(
@@ -48,39 +59,60 @@ class HomeView extends GetView<HomeController> {
 
   Future<void> makePayment() async {
     try {
-      paymentsIntentData = await creatPaymentIntent('20', 'USD');
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-            paymentIntentClientSecret: paymentsIntentData!['client_secret'],
-            applePay: true,
-            googlePay: true,
-            style: ThemeMode.dark,
-            merchantCountryCode: 'US',
-            merchantDisplayName: 'Sulaiman'),
-      );
+      paymentsIntentData =
+          await creatPaymentIntent('20', 'USD'); //json.decode(response.body);
+      // print('Response body==>${response.body.toString()}');
+      await Stripe.instance
+          .initPaymentSheet(
+              paymentSheetParameters: SetupPaymentSheetParameters(
+                  paymentIntentClientSecret:
+                      paymentsIntentData!['client_secret'],
+                  applePay: true,
+                  googlePay: true,
+                  testEnv: true,
+                  style: ThemeMode.dark,
+                  merchantCountryCode: 'US',
+                  merchantDisplayName: 'ANNIE'))
+          .then((value) {});
 
+      ///now finally display payment sheeet
       displayPaymentSheet();
-    } catch (e) {
-      print(e.toString());
+    } catch (e, s) {
+      print('exception:$e$s');
     }
   }
 
   displayPaymentSheet() async {
     try {
-      await Stripe.instance.presentPaymentSheet(
-          parameters: PresentPaymentSheetParameters(
-              clientSecret: paymentsIntentData!['client_secret'],
-              confirmPayment: true));
-      paymentsIntentData = null;
-      Get.snackbar('Successful', 'Paid Successfully');
+      await Stripe.instance
+          .presentPaymentSheet(
+              parameters: PresentPaymentSheetParameters(
+        clientSecret: paymentsIntentData!['client_secret'],
+        confirmPayment: true,
+      ))
+          .then((newValue) {
+        print('payment intent' + paymentsIntentData!['id'].toString());
+        print(
+            'payment intent' + paymentsIntentData!['client_secret'].toString());
+        print('payment intent' + paymentsIntentData!['amount'].toString());
+        print('payment intent' + paymentsIntentData.toString());
+        //orderPlaceApi(paymentIntentData!['id'].toString());
+        ScaffoldMessenger.of(Get.context!)
+            .showSnackBar(SnackBar(content: Text("paid successfully")));
+
+        paymentsIntentData = null;
+      }).onError((error, stackTrace) {
+        print('Exception/DISPLAYPAYMENTSHEET==> $error $stackTrace');
+      });
     } on StripeException catch (e) {
-      print(e.toString());
+      print('Exception/DISPLAYPAYMENTSHEET==> $e');
       showDialog(
-        context: Get.context!,
-        builder: (_) => AlertDialog(
-          content: Text('Cancelled'),
-        ),
-      );
+          context: Get.context!,
+          builder: (_) => AlertDialog(
+                content: Text("Cancelled "),
+              ));
+    } catch (e) {
+      print('$e');
     }
   }
 
@@ -89,25 +121,26 @@ class HomeView extends GetView<HomeController> {
       Map<String, dynamic> body = {
         'amount': calculateAmount(amount),
         'currency': currency,
-        'payment_method_types[]': 'card',
+        'payment_method_types[]': 'card'
       };
 
       var response = await http.post(
-          Uri.parse('https://dashboard.stripe.com/v1/payment_intents'),
+          Uri.parse('https://api.stripe.com/v1/payment_intents'),
           body: body,
           headers: {
-            "Authorization":
-                "Bearer sk_test_51KHP15Dv7hqQCbNCoey6lU0qC0nBDRkC3sdUpb1ICZFjLEqYw4vBW6wfGlUHNEKyGDdnscQt4KkkfmZC95RUKtzC00Vqj25L2K",
-            "Content-Type": "application/x-www-form-urlencoded"
+            'Authorization':
+                'Bearer sk_test_51KHP15Dv7hqQCbNCoey6lU0qC0nBDRkC3sdUpb1ICZFjLEqYw4vBW6wfGlUHNEKyGDdnscQt4KkkfmZC95RUKtzC00Vqj25L2K',
+            'Content-Type': 'application/x-www-form-urlencoded'
           });
-      jsonDecode(response.body.toString());
+      log(response.body);
+      return jsonDecode(response.body);
     } catch (e) {
       print(e.toString());
     }
   }
 
   calculateAmount(String amount) {
-    final price = int.parse(amount) * 100;
+    final price = (int.parse(amount)) * 100;
     return price.toString();
   }
 }
