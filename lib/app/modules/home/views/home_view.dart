@@ -36,11 +36,14 @@ class HomeView extends GetView<HomeController> {
                       color: Colors.green,
                       borderRadius: BorderRadius.circular(15)),
                   child: Center(
-                    child: Text('Pay Now',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 25)),
+                    child: Text(
+                      'Pay Now',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 25,
+                      ),
+                    ),
                   )),
             ),
           ],
@@ -64,15 +67,16 @@ class HomeView extends GetView<HomeController> {
       // print('Response body==>${response.body.toString()}');
       await Stripe.instance
           .initPaymentSheet(
-              paymentSheetParameters: SetupPaymentSheetParameters(
-                  paymentIntentClientSecret:
-                      paymentsIntentData!['client_secret'],
-                  applePay: true,
-                  googlePay: true,
-                  testEnv: true,
-                  style: ThemeMode.dark,
-                  merchantCountryCode: 'US',
-                  merchantDisplayName: 'ANNIE'))
+            paymentSheetParameters: SetupPaymentSheetParameters(
+              paymentIntentClientSecret: paymentsIntentData!['client_secret'],
+              applePay: true,
+              googlePay: true,
+              testEnv: true,
+              style: ThemeMode.dark,
+              merchantCountryCode: 'US',
+              merchantDisplayName: 'ANNIE',
+            ),
+          )
           .then((value) {});
 
       ///now finally display payment sheeet
